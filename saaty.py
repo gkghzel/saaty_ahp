@@ -3,6 +3,21 @@ from utils import timeStamp, comment, get
 from criteria import Criteria
 import numpy as np
 
+# init
+global RATIO_COEF
+RATIO_COEF = {
+    1: 1,  # is in fact 0 but changed for division purposes
+    2: 1,  # is in fact 0 but changed for division purposes
+    3: 0.58,
+    4: 0.9,
+    5: 1.12,
+    6: 1.24,
+    7: 1.32,
+    8: 1.41,
+    9: 1.45,
+    10: 1.49
+}
+
 
 # building preference matrix
 def buildPrefrenceMatrix(criteriaArray):
@@ -21,21 +36,49 @@ def buildPrefrenceMatrix(criteriaArray):
 
 def compareCriteria(c1, c2):
     comment(
-        f"How important is \"{c1.name}\" is to \"{c2.name}\" ?", empty=True)
+        f"How important is \"{c1.name}\" compared to \"{c2.name}\" ?", empty=True)
     return float(get())
 
 
 # processing preference matrix
-def processPreferenceMatrix(preferenceMatrix):
+# calculating criteria weights
+def calculateCriteriaWeights(preferenceMatrix, criteriaArray):
+    comment(f"Calculating criteria weights...")
     matrixSize = len(preferenceMatrix)
-    comment(f"Processing size {matrixSize} prefernce matrix...")
     verticalSum = np.sum(preferenceMatrix, axis=0)
-    nomalisedPreferenceMatrix = np.ones((matrixSize, matrixSize))
-    for col in range(matrixSize):
-        nomalisedPreferenceMatrix[:,col] = preferenceMatrix[:, col]/verticalSum[col]
-    print(preferenceMatrix)
-    print(verticalSum)
-    print(nomalisedPreferenceMatrix)
+    criteriaWeights = (np.sum(preferenceMatrix/verticalSum, axis=1))/matrixSize
+    for _ in range(matrixSize):
+        criteriaArray[_].weight = criteriaWeights[_]
+    return criteriaWeights
+
+
+# calculating consistency
+def computeConsistency(preferenceMatrix, criteriaWeights):
+    comment(f"Calculating consistency index...")
+    matrixSize = len(preferenceMatrix)
+    consistencyMatrix = preferenceMatrix*criteriaWeights
+    weightedSum = np.sum(consistencyMatrix, axis=1)
+    lmdMax = sum(weightedSum/criteriaWeights)/matrixSize
+    consistencyIndex = (lmdMax-matrixSize)/(matrixSize-1)
+    consistencyRatio = consistencyIndex/RATIO_COEF[matrixSize]
+    return (consistencyIndex, consistencyRatio)
+
+
+def processPreferenceMatrix(preferenceMatrix, criteriaArray):
+    comment(f"Processing size {len(criteriaArray)} prefernce matrix...")
+    criteriaWeights = calculateCriteriaWeights(preferenceMatrix, criteriaArray)
+    consistencyIndex = computeConsistency(preferenceMatrix, criteriaWeights)
+    return consistencyIndex
+
+
+# sorting criteria weight-waise
+def sortCriteria(criteriaArray):
+    criteriaWeightsArray = []
+    for crt in criteriaArray:
+        criteriaWeightsArray.append(crt.weight)
+    criteriaWeightsArray.sort(reverse=True)
+    for crt in criteriaArray:
+        crt.rank = criteriaWeightsArray.index(crt.weight)+1
 
 
 # main process
@@ -49,7 +92,18 @@ def main():
         cname = get("Criteria name: ")
         criteriaArray.append(Criteria(cname))
     preferenceMatrix = buildPrefrenceMatrix(criteriaArray)
-    processPreferenceMatrix(preferenceMatrix)
+    _, consistencyRatio = processPreferenceMatrix(preferenceMatrix, criteriaArray)
+
+    if consistencyRatio < 0.1:
+        comment("Computed criteria weights are valid for use.", empty=True)
+        sortCriteria(criteriaArray)
+    else:
+        comment("Computed criteria weights are not valid for use! please check priority rating.", empty=True)
+
+    comment("Criteria weights for the specified matrix are: ")
+    for crt in criteriaArray:
+        comment(f"rank: {crt.rank} - {crt.name}: {round(crt.weight,3)}", empty=True)
+    comment(f"with consistency ratio of: {round(consistencyRatio,4)}", empty=True)
 
 
 if __name__ == "__main__":
