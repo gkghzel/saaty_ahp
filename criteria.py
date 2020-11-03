@@ -1,5 +1,6 @@
 class Criteria:
     def __init__(self, name):
         self.name = name
-        self.ranking = 0
+        self.weight = 0
+        self.rank = 0
         
