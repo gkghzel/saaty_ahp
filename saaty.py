@@ -97,13 +97,14 @@ def main():
     if consistencyRatio < 0.1:
         comment("Computed criteria weights are valid for use.", empty=True)
         sortCriteria(criteriaArray)
+        comment("Criteria weights for the specified matrix are: ")
+        for crt in criteriaArray:
+            comment(f"rank: {crt.rank} - {crt.name}: {round(crt.weight,3)}", empty=True)
+        comment(f"with consistency ratio of: {round(consistencyRatio,4)}", empty=True)
     else:
         comment("Computed criteria weights are not valid for use! please check priority rating.", empty=True)
-
-    comment("Criteria weights for the specified matrix are: ")
-    for crt in criteriaArray:
-        comment(f"rank: {crt.rank} - {crt.name}: {round(crt.weight,3)}", empty=True)
-    comment(f"with consistency ratio of: {round(consistencyRatio,4)}", empty=True)
+        comment(f"with consistency ratio of: {round(consistencyRatio,4)}", empty=True)
+    
 
 
 if __name__ == "__main__":
